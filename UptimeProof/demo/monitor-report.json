@@ -1,0 +1,8 @@
+{
+  "demo": true,
+  "page": "independent uptime monitor report",
+  "monitor": "Public third-party HTTP monitor (demo)",
+  "target": "NodeNova RPC - Ethereum Mainnet RPC endpoint",
+  "result": "endpoint returned HTTP 503 for every check during this outage; NOT shown on the provider status page",
+  "outages": [{"affected_components": ["Ethereum Mainnet RPC"], "downtime_bp_of_window": 300}]
+}

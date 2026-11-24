@@ -1,0 +1,7 @@
+{
+  "demo": true,
+  "page": "status page",
+  "provider": "NodeNova RPC (demo provider)",
+  "components": [{"name": "Ethereum Mainnet RPC", "status": "operational"}],
+  "incidents_in_window": []
+}

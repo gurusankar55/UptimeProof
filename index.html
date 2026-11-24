@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UptimeProof — SLA escrow for RPC & API services on GenLayer</title>
+<meta name="description" content="Prepay your RPC/API provider into escrow. When the period ends, GenLayer validators read the provider's own status page and refund you automatically if the promised uptime was missed.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230b1220'/><path d='M4 18h6l3-8 5 14 3-6h7' stroke='%2334d399' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#070b14;--panel:#0d1424;--panel2:#111a2e;--line:#1e2a44;--text:#e6ecf7;--muted:#8a97b2;--green:#34d399;--amber:#fbbf24;--orange:#fb923c;--red:#f87171;--blue:#60a5fa}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;line-height:1.55}
+a{color:var(--blue)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+header{border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(7,11,20,.92);backdrop-filter:blur(8px);z-index:5}
+.nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{display:flex;gap:10px;align-items:center;font-family:'Space Grotesk';font-weight:700;font-size:20px}
+.logo svg{width:30px;height:30px}
+.btn{background:var(--green);color:#04120c;border:0;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer;font-size:14px}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn.red{background:var(--red);color:#1a0505}
+.btn:disabled{opacity:.5;cursor:wait}
+.hero{padding:70px 0 40px;display:grid;grid-template-columns:1.2fr 1fr;gap:40px;align-items:center}
+h1{font-family:'Space Grotesk';font-size:46px;line-height:1.08;margin:0 0 16px}
+h1 em{font-style:normal;color:var(--green)}
+h2{font-family:'Space Grotesk';font-size:28px;margin:0 0 8px}
+.lead{color:var(--muted);font-size:18px}
+.pulse{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px}
+.bars{display:flex;gap:3px;height:42px;align-items:flex-end;margin:12px 0}
+.bars i{flex:1;border-radius:2px;background:var(--green);height:100%}
+.bars i.o{background:var(--red)}.bars i.d{background:var(--amber)}
+.mono{font-family:'JetBrains Mono',monospace;font-size:13px}
+.muted{color:var(--muted)}
+section{padding:46px 0;border-top:1px solid var(--line)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+.card h3{margin:6px 0;font-size:16px}
+.step{font-family:'JetBrains Mono';color:var(--green);font-size:12px}
+.tier{border-top:4px solid}
+.t0{border-color:var(--green)}.t1{border-color:var(--amber)}.t2{border-color:var(--orange)}.t3{border-color:var(--red)}
+.big{font-family:'Space Grotesk';font-size:26px;font-weight:700}
+.app{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:10px;font-size:14px;font-family:inherit}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{background:transparent;color:var(--muted);border:0;padding:8px 14px;cursor:pointer;font-weight:600}
+.seg button.on{background:var(--panel2);color:var(--text)}
+.badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;background:var(--panel2);border:1px solid var(--line)}
+.b-OPEN{color:var(--blue)}.b-ACTIVE{color:var(--amber)}.b-SETTLED{color:var(--green)}.b-CANCELLED,.b-NO_DATA_REFUND{color:var(--red)}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:4px 10px;font-size:14px;margin:10px 0}
+.kv div:nth-child(odd){color:var(--muted)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+#log{background:#050810;border:1px solid var(--line);border-radius:10px;padding:10px;height:150px;overflow:auto;white-space:pre-wrap}
+.tl{height:8px;background:var(--panel2);border-radius:9px;overflow:hidden;margin:8px 0}
+.tl b{display:block;height:100%;background:var(--green)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{border-bottom:1px solid var(--line);padding:8px;text-align:left}
+#walletList button{display:flex;gap:10px;align-items:center;width:100%;margin:6px 0}
+#walletList img{width:22px;height:22px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:10}
+.modal .card{width:340px}
+footer{padding:30px 0;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
+@media(max-width:860px){.hero,.app{grid-template-columns:1fr}.grid3,.grid4{grid-template-columns:1fr 1fr}h1{font-size:34px}}
+</style>
+</head>
+<body>
+<header><div class="wrap nav">
+  <div class="logo"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#111a2e"/><path d="M4 18h6l3-8 5 14 3-6h7" stroke="#34d399" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>UptimeProof</div>
+  <div class="row" style="flex:0;gap:10px;align-items:center">
+    <span id="netBadge" class="badge">Studio</span>
+    <button class="btn" id="connectBtn">Connect wallet</button>
+  </div>
+</div></header>
+
+<div class="wrap hero">
+  <div>
+    <h1>Your RPC promised <em>99.9%</em>.<br>Now the contract checks.</h1>
+    <p class="lead">Prepay your RPC, API or node provider into an escrow. When the billing period ends, GenLayer validators read the provider's <b>own public status page</b>, measure real outage on the component you bought, and the SLA refund is paid automatically. No support tickets. No "credits" you never see.</p>
+    <div class="actions"><a class="btn" href="#app">Open the app</a><a class="btn ghost" href="#how">How it works</a></div>
+  </div>
+  <div class="pulse">
+    <div class="mono muted">Ethereum Mainnet RPC · last 30 days</div>
+    <div class="bars" id="bars"></div>
+    <div class="row mono"><span>uptime <b id="upt">99.42%</b></span><span>SLA <b>99.90%</b></span><span style="color:var(--amber)">tier 1 → 25% back</span></div>
+  </div>
+</div>
+
+<section id="problem"><div class="wrap">
+  <h2>The problem</h2>
+  <p class="muted" style="max-width:800px">Crypto builders pay RPC and API providers every month for an uptime promise. When the endpoint goes down, bots miss trades and dApps break, but the SLA credit only comes if you open a ticket, argue and wait. Most teams never claim it. The provider is the one who decides if the outage "counted".</p>
+  <div class="grid3" style="margin-top:16px">
+    <div class="card"><div class="step">FACT</div><h3>The proof is already public</h3><p class="muted">Providers publish incidents on their status pages. Nobody turns that into an automatic refund.</p></div>
+    <div class="card"><div class="step">GAP</div><h3>Reading a status page is subjective</h3><p class="muted">Which incident hit your component? Outage or "degraded"? Scheduled maintenance? A normal smart contract can't judge this.</p></div>
+    <div class="card"><div class="step">FIX</div><h3>GenLayer validators judge, code pays</h3><p class="muted">Validators measure downtime and must agree on the same SLA tier. Fixed credit table decides the money.</p></div>
+  </div>
+</div></section>
+
+<section id="how"><div class="wrap">
+  <h2>How it works</h2>
+  <div class="grid4" style="margin-top:16px">
+    <div class="card"><div class="step">01 · CUSTOMER</div><h3>Create a plan</h3><p class="muted">Provider wallet, component, status page URL, SLA % and period. Fee is locked in this plan's own escrow.</p></div>
+    <div class="card"><div class="step">02 · PROVIDER</div><h3>Accept (+ bond)</h3><p class="muted">Provider accepts the terms, optionally posts a bond. The period starts. No accept → customer cancels and gets the fee back.</p></div>
+    <div class="card"><div class="step">03 · CUSTOMER</div><h3>Report hidden outage</h3><p class="muted">If the status page hides an outage, add one public evidence link (third-party monitor). Validators weigh it.</p></div>
+    <div class="card"><div class="step">04 · ANYONE</div><h3>Settle</h3><p class="muted">After the period, validators read the page and agree on the tier. Contract pays both sides in the same transaction.</p></div>
+  </div>
+</div></section>
+
+<section id="table"><div class="wrap">
+  <h2>SLA credit table (fixed in the contract)</h2>
+  <div class="grid4" style="margin-top:16px">
+    <div class="card tier t0"><div class="step">TIER 0</div><div class="big">SLA met</div><p class="muted">Provider gets 100% of fee + bond back.</p></div>
+    <div class="card tier t1"><div class="step">TIER 1</div><div class="big">−&lt;1%</div><p class="muted">Missed by under 1.00%. Customer refunded 25% of fee.</p></div>
+    <div class="card tier t2"><div class="step">TIER 2</div><div class="big">−&lt;5%</div><p class="muted">Missed by under 5.00%. Customer refunded 50% of fee.</p></div>
+    <div class="card tier t3"><div class="step">TIER 3</div><div class="big">Worse</div><p class="muted">Customer refunded 100% of fee <b>plus the provider's bond</b>.</p></div>
+  </div>
+  <p class="muted mono" style="margin-top:14px">Status page unreadable (404 / login wall / taken down) after 3 tries and a grace period → full refund to the customer. Keeping the page public is the provider's job.</p>
+</div></section>
+
+<section id="app"><div class="wrap">
+  <div class="row" style="align-items:center;justify-content:space-between;margin-bottom:14px">
+    <h2>App</h2>
+    <div class="seg"><button id="modeDemo" class="on">Demo contract (minutes)</button><button id="modeLive">Live contract (days)</button></div>
+  </div>
+  <p class="muted mono" id="modeNote"></p>
+  <div class="app">
+    <div class="card">
+      <h3>1 · Create a plan (customer)</h3>
+      <label>Provider wallet address</label><input id="fProvider" placeholder="0x...">
+      <div class="row"><div><label>Service name</label><input id="fService" value="NodeNova RPC"></div><div><label>Component bought</label><input id="fComponent" value="Ethereum Mainnet RPC"></div></div>
+      <label>Provider status page URL (https)</label>
+      <input id="fUrl" placeholder="https://status.provider.com/api/v2/incidents.json">
+      <div id="demoPick" class="row" style="margin-top:6px">
+        <select id="fDemoFile">
+          <option value="status-ok.json">Demo page: no outage → tier 0</option>
+          <option value="status-minor.json">Demo page: small outage → tier 1</option>
+          <option value="status-major.json">Demo page: big outage → tier 3</option>
+          <option value="status-missing.json">Demo page: 404 / removed → no-data refund</option>
+        </select>
+      </div>
+      <div class="row"><div><label>SLA %</label><input id="fSla" value="99.90"></div><div><label id="periodLbl">Period (minutes)</label><input id="fPeriod" value="2"></div><div><label>Fee (GEN)</label><input id="fFee" value="10"></div></div>
+      <div class="actions"><button class="btn" id="createBtn">Lock fee & create plan</button></div>
+    </div>
+    <div class="card">
+      <h3>2 · Find a plan</h3>
+      <div class="row"><input id="lookupId" placeholder="Plan ID e.g. 1"><button class="btn ghost" style="flex:0" id="lookupBtn">Load</button><button class="btn ghost" style="flex:0" id="latestBtn">Latest</button></div>
+      <div id="planView" class="muted" style="margin-top:12px">No plan loaded.</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:18px"><div class="row" style="justify-content:space-between"><h3>Activity</h3><span class="mono muted" id="addrShow">not connected</span></div><div id="log" class="mono"></div></div>
+</div></section>
+
+<section id="trust"><div class="wrap">
+  <h2>Why stewards can trust the money logic</h2>
+  <table>
+    <tr><th>Risk</th><th>How UptimeProof handles it</th></tr>
+    <tr><td>AI decides money</td><td>AI only measures downtime. Validators must return the <b>same tier</b> (strict equality). Payout split is plain code.</td></tr>
+    <tr><td>Shared pool drained</td><td>No pool. Every plan holds only its own fee + bond.</td></tr>
+    <tr><td>Demo touching real funds</td><td>Demo and live are separate deployments. Demo counts minutes, live counts days.</td></tr>
+    <tr><td>Provider never accepts</td><td>Customer cancels and gets 100% back.</td></tr>
+    <tr><td>Provider hides the status page</td><td>3 failed reads + grace period → customer refunded fee + bond.</td></tr>
+    <tr><td>Early / repeated settle</td><td>Settle only after period + report window; retry gap between reads; settled plans are final.</td></tr>
+    <tr><td>Prompt injection in page text</td><td>Validators are told page and evidence text is data, never commands.</td></tr>
+    <tr><td>Fake evidence</td><td>Evidence counts only if it's a credible public source showing an outage the page didn't report.</td></tr>
+  </table>
+</div></section>
+
+<footer><div class="wrap row" style="justify-content:space-between"><span>UptimeProof · built on GenLayer Intelligent Contracts · by Sankar D</span><span><a id="ghLink" href="#">GitHub</a> · <span id="addrFoot" class="mono"></span></span></div></footer>
+
+<div class="modal" id="walletModal"><div class="card"><h3>Choose wallet</h3><div id="walletList"></div><button class="btn ghost" style="width:100%;margin-top:8px" id="closeModal">Close</button></div></div>
+
+<script src="config.js"></script>
+<script type="module">
+import { createClient } from "https://esm.sh/genlayer-js@latest";
+import { studionet } from "https://esm.sh/genlayer-js@latest/chains";
+import { TransactionStatus } from "https://esm.sh/genlayer-js@latest/types";
+
+const CFG = window.UPTIMEPROOF_CONFIG;
+const $ = id => document.getElementById(id);
+let mode = "demo", account = null, provider = null;
+const wallets = [];
+
+// hero bars
+(() => { const b=$("bars"); for(let i=0;i<30;i++){const x=document.createElement("i"); if(i===11)x.className="o"; if(i===19||i===20)x.className="d"; b.appendChild(x);} })();
+$("ghLink").href = CFG.GITHUB;
+
+function contract(){ return mode==="demo" ? CFG.DEMO_CONTRACT : CFG.LIVE_CONTRACT; }
+function log(m){ const l=$("log"); l.textContent += `[${new Date().toLocaleTimeString()}] ${m}\n`; l.scrollTop=l.scrollHeight; }
+function short(a){ return a ? a.slice(0,6)+"…"+a.slice(-4) : ""; }
+function fmtGen(wei){ const w=BigInt(wei||0); const s=(w/10n**18n).toString(); const f=(w%10n**18n).toString().padStart(18,"0").replace(/0+$/,""); return f? `${s}.${f.slice(0,4)}` : s; }
+function toWei(x){ const [i,f=""]=String(x).trim().split("."); if(!/^\d+$/.test(i||"0")||!/^\d*$/.test(f)) throw new Error("Bad GEN amount"); return BigInt(i||"0")*10n**18n + BigInt((f+"0".repeat(18)).slice(0,18)); }
+function setMode(m){
+  mode=m; $("modeDemo").classList.toggle("on",m==="demo"); $("modeLive").classList.toggle("on",m==="live");
+  $("demoPick").style.display = m==="demo" ? "flex":"none";
+  $("periodLbl").textContent = m==="demo" ? "Period (minutes)" : "Period (days)";
+  $("fPeriod").value = m==="demo" ? "2" : "30";
+  $("modeNote").textContent = (m==="demo"
+    ? "Demo contract: period in minutes, demo status pages hosted in the GitHub repo. Same wallet may act as customer and provider for testing."
+    : "Live contract: period in days, real provider status page, provider must be a different wallet.") + "  Contract: " + contract();
+  $("addrFoot").textContent = short(contract());
+  if(m==="demo") pickDemo(); else $("fUrl").value="";
+}
+function pickDemo(){ $("fUrl").value = CFG.DEMO_FILES_BASE + $("fDemoFile").value; }
+$("modeDemo").onclick=()=>setMode("demo"); $("modeLive").onclick=()=>setMode("live"); $("fDemoFile").onchange=pickDemo;
+
+// EIP-6963 wallet discovery (Rabby, MetaMask, ...)
+window.addEventListener("eip6963:announceProvider", e => { if(!wallets.find(w=>w.info.uuid===e.detail.info.uuid)) wallets.push(e.detail); });
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+$("connectBtn").onclick = () => {
+  const list=$("walletList"); list.innerHTML="";
+  const opts = wallets.length ? wallets : (window.ethereum ? [{info:{name:"Browser wallet",icon:"",uuid:"inj"},provider:window.ethereum}] : []);
+  if(!opts.length){ list.innerHTML='<p class="muted">No wallet found. Install Rabby or MetaMask.</p>'; }
+  opts.forEach(w=>{ const b=document.createElement("button"); b.className="btn ghost"; b.innerHTML=(w.info.icon?`<img src="${w.info.icon}">`:"")+w.info.name; b.onclick=()=>connect(w.provider); list.appendChild(b); });
+  $("walletModal").style.display="flex";
+};
+$("closeModal").onclick=()=>$("walletModal").style.display="none";
+
+async function ensureChain(p){
+  const hex="0x"+studionet.id.toString(16);
+  try { await p.request({method:"wallet_switchEthereumChain",params:[{chainId:hex}]}); }
+  catch(e){
+    await p.request({method:"wallet_addEthereumChain",params:[{chainId:hex,chainName:"GenLayer Studio",nativeCurrency:{name:"GEN",symbol:"GEN",decimals:18},rpcUrls:[studionet.rpcUrls.default.http[0]],blockExplorerUrls:null}]});
+  }
+}
+async function connect(p){
+  $("walletModal").style.display="none";
+  try{
+    const accs = await p.request({method:"eth_requestAccounts"});
+    await ensureChain(p);
+    provider=p; account=accs[0];
+    $("connectBtn").textContent=short(account); $("addrShow").textContent=account;
+    log("Connected "+account+" on GenLayer Studio");
+    if(!$("fProvider").value && mode==="demo") $("fProvider").value=account;
+    p.on && p.on("accountsChanged", a=>{ account=a[0]; $("connectBtn").textContent=short(account); $("addrShow").textContent=account; });
+  }catch(e){ log("Connect failed: "+(e.message||e)); }
+}
+function reader(){ return createClient({ chain: studionet }); }
+function writer(){ if(!account) throw new Error("Connect wallet first"); return createClient({ chain: studionet, account, provider }); }
+
+async function write(fn, args, value=0n, btn){
+  if(!contract().startsWith("0x")) { log("Contract address missing in config.js"); return null; }
+  if(btn) btn.disabled=true;
+  try{
+    log(`Sending ${fn}… sign in your wallet`);
+    const c=writer();
+    const hash = await c.writeContract({ address: contract(), functionName: fn, args, value });
+    log(`Tx ${hash} sent. Waiting for validators (settle can take 1-3 min)…`);
+    const r = await c.waitForTransactionReceipt({ hash, status: TransactionStatus.ACCEPTED, retries: 120, interval: 4000 });
+    log(`${fn} accepted ✔`);
+    return r;
+  }catch(e){ log(`${fn} failed: `+(e.shortMessage||e.message||e)); return null; }
+  finally{ if(btn) btn.disabled=false; }
+}
+async function read(fn, args=[]){ return await reader().readContract({ address: contract(), functionName: fn, args }); }
+
+$("createBtn").onclick = async (ev) => {
+  try{
+    const sla = Math.round(parseFloat($("fSla").value)*100);
+    const period = parseInt($("fPeriod").value,10);
+    const fee = toWei($("fFee").value);
+    const before = Number(await read("get_count"));
+    const r = await write("create_plan", [$("fProvider").value.trim(), $("fService").value, $("fComponent").value, $("fUrl").value.trim(), sla, period], fee, ev.target);
+    if(r){ const n = Number(await read("get_count")); if(n>before){ $("lookupId").value=n; loadPlan(n); log("Plan #"+n+" created"); } }
+  }catch(e){ log("Create failed: "+e.message); }
+};
+$("lookupBtn").onclick=()=>loadPlan(parseInt($("lookupId").value,10));
+$("latestBtn").onclick=async()=>{ try{ const n=Number(await read("get_count")); if(n){ $("lookupId").value=n; loadPlan(n);} else log("No plans yet"); }catch(e){ log("Read failed: "+e.message); } };
+
+const TIER_TXT = {"-1":"—","0":"Tier 0 · SLA met","1":"Tier 1 · 25% refund","2":"Tier 2 · 50% refund","3":"Tier 3 · 100% + bond refund"};
+function t(ts){ return ts ? new Date(ts*1000).toLocaleString() : "—"; }
+async function loadPlan(id){
+  if(!id){ return; }
+  try{
+    const p = JSON.parse(await read("get_plan",[id]));
+    if(!p.id){ $("planView").textContent="Plan not found."; return; }
+    const now=Date.now()/1000; let pct=0;
+    if(p.start){ pct=Math.min(100,Math.max(0,(now-p.start)/(p.end-p.start)*100)); }
+    const me=(account||"").toLowerCase();
+    const isC=me===p.customer.toLowerCase(), isP=me===p.provider.toLowerCase();
+    $("planView").innerHTML = `
+      <div class="row" style="justify-content:space-between"><b>Plan #${p.id} · ${esc(p.service)}</b><span class="badge b-${p.state}">${p.state}</span></div>
+      ${p.start?`<div class="tl"><b style="width:${pct}%"></b></div>`:""}
+      <div class="kv">
+        <div>Component</div><div>${esc(p.component)}</div>
+        <div>Status page</div><div class="mono" style="word-break:break-all"><a href="${esc(p.status_url)}" target="_blank" rel="noopener">${esc(p.status_url)}</a></div>
+        <div>SLA</div><div>${(p.sla_bp/100).toFixed(2)}% over ${p.period} ${p.period_unit}</div>
+        <div>Fee / bond</div><div>${fmtGen(p.fee)} GEN / ${fmtGen(p.bond)} GEN</div>
+        <div>Customer</div><div class="mono">${short(p.customer)}${isC?" (you)":""}</div>
+        <div>Provider</div><div class="mono">${short(p.provider)}${isP?" (you)":""}</div>
+        <div>Accept by</div><div>${t(p.accept_by)}</div>
+        <div>Period</div><div>${t(p.start)} → ${t(p.end)}</div>
+        <div>Evidence</div><div>${p.evidence_url?`<a href="${esc(p.evidence_url)}" target="_blank" rel="noopener">link</a> ${esc(p.evidence_note)}`:"—"}</div>
+        <div>Status reads</div><div>${p.attempts}</div>
+        <div>Result</div><div>${TIER_TXT[String(p.tier)]}${p.state!=="OPEN"&&p.state!=="ACTIVE"?` · customer ${fmtGen(p.refund_to_customer)} GEN · provider ${fmtGen(p.paid_to_provider)} GEN`:""}</div>
+      </div>
+      <div class="actions" id="act"></div>`;
+    const act=$("act");
+    const add=(txt,fn,cls="")=>{ const b=document.createElement("button"); b.className="btn "+cls; b.textContent=txt; b.onclick=async()=>{ await fn(b); loadPlan(id); }; act.appendChild(b); };
+    if(p.state==="OPEN"){
+      add("Accept as provider",async b=>{ const bond=prompt("Optional bond in GEN (0 for none):","0"); if(bond===null)return; await write("accept_plan",[id],toWei(bond||"0"),b); });
+      add("Cancel & refund (customer)",b=>write("cancel_unaccepted",[id],0n,b),"ghost");
+    }
+    if(p.state==="ACTIVE"){
+      if(!p.evidence_url) add("Report hidden outage",async b=>{ const def = mode==="demo" ? CFG.DEMO_FILES_BASE+"monitor-report.json" : ""; const u=prompt("Public evidence link (https):",def); if(!u)return; const n=prompt("Short note:","Endpoint down, not shown on status page")||""; await write("report_outage",[id,u,n],0n,b); },"ghost");
+      add("Settle now",b=>write("settle",[id],0n,b));
+    }
+    if(p.state==="ACTIVE" && now < p.end) log(`Plan #${id}: settle opens after ${t(p.end)} + report window`);
+  }catch(e){ $("planView").textContent="Read failed: "+e.message; }
+}
+function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+setMode("demo");
+</script>
+</body>
+</html>

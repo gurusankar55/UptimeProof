@@ -1,0 +1,10 @@
+{
+  "demo": true,
+  "page": "status page",
+  "provider": "NodeNova RPC (demo provider)",
+  "components": [{"name": "Ethereum Mainnet RPC", "status": "operational"}],
+  "incidents_in_window": [
+    {"name": "Elevated RPC errors - eth_call failing", "impact": "major_outage", "affected_components": ["Ethereum Mainnet RPC"], "downtime_bp_of_window": 50},
+    {"name": "Dashboard slow to load", "impact": "degraded_performance", "affected_components": ["Dashboard"], "downtime_bp_of_window": 0}
+  ]
+}
