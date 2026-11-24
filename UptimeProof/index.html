@@ -247,7 +247,8 @@ async function write(fn, args, value=0n, btn){
   try{
     log(`Sending ${fn}… sign in your wallet`);
     const c=writer();
-    const hash = await c.writeContract({ address: contract(), functionName: fn, args, value });
+    let fees; try{ if(typeof c.estimateTransactionFees==="function"){ const est=await c.estimateTransactionFees({leaderTimeunitsAllocation:300n,validatorTimeunitsAllocation:600n,rotations:[0n]}); fees={distribution:est.distribution,feeValue:est.feeValue}; } else { log("fee helper missing in this SDK version"); } }catch(e){ log("fee estimate failed: "+e.message); }
+    const hash = await c.writeContract({ address: contract(), functionName: fn, args, value, ...(fees?{fees}:{}) });
     log(`Tx ${hash} sent. Waiting for validators (settle can take 1-3 min)…`);
     const r = await c.waitForTransactionReceipt({ hash, status: TransactionStatus.ACCEPTED, retries: 120, interval: 4000 });
     log(`${fn} accepted ✔`);
