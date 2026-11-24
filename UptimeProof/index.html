@@ -302,11 +302,11 @@ async function loadPlan(id){
     const act=$("act");
     const add=(txt,fn,cls="")=>{ const b=document.createElement("button"); b.className="btn "+cls; b.textContent=txt; b.onclick=async()=>{ await fn(b); loadPlan(id); }; act.appendChild(b); };
     if(p.state==="OPEN"){
-      add("Accept as provider",async b=>{ const bond=prompt("Optional bond in GEN (0 for none):","0"); if(bond===null)return; await write("accept_plan",[id],toWei(bond||"0"),b); });
+      add("Accept as provider",async b=>{ const r1=await askBox("Accept plan",[{label:"Optional bond in GEN (0 for none)",value:"0"}]); if(r1===null)return; const bond=r1[0]; await write("accept_plan",[id],toWei(bond||"0"),b); });
       add("Cancel & refund (customer)",b=>write("cancel_unaccepted",[id],0n,b),"ghost");
     }
     if(p.state==="ACTIVE"){
-      if(!p.evidence_url) add("Report hidden outage",async b=>{ const def = mode==="demo" ? CFG.DEMO_FILES_BASE+"monitor-report.json" : ""; const u=prompt("Public evidence link (https):",def); if(!u)return; const n=prompt("Short note:","Endpoint down, not shown on status page")||""; await write("report_outage",[id,u,n],0n,b); },"ghost");
+      if(!p.evidence_url) add("Report hidden outage",async b=>{ const def = mode==="demo" ? CFG.DEMO_FILES_BASE+"monitor-report.json" : ""; const r2=await askBox("Report hidden outage",[{label:"Public evidence link (https)",value:def},{label:"Short note",value:"Endpoint down, not shown on status page"}]); if(r2===null)return; const u=r2[0]; if(!u)return; const n=r2[1]||""; await write("report_outage",[id,u,n],0n,b); },"ghost");
       add("Settle now",b=>write("settle",[id],0n,b));
     }
     if(p.state==="ACTIVE" && now < p.end) log(`Plan #${id}: settle opens after ${t(p.end)} + report window`);
@@ -315,5 +315,27 @@ async function loadPlan(id){
 function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 setMode("demo");
 </script>
-</body>
+<style>
+#askOv{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:9999}
+#askBx{background:#0f1a2e;border:1px solid #2a3b5c;border-radius:14px;padding:20px;width:min(420px,92vw);color:#e8eefc;font-family:inherit}
+#askBx h3{margin:0 0 12px;font-size:18px}
+#askBx label{display:block;font-size:13px;margin:10px 0 4px;opacity:.8}
+#askBx input{width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #2a3b5c;background:#0a1222;color:#fff;font-size:15px}
+#askBx .ab{display:flex;gap:10px;margin-top:16px;justify-content:flex-end}
+#askBx button{padding:9px 16px;border-radius:8px;border:0;cursor:pointer;font-size:14px}
+#askOk{background:#34d399;color:#04201a;font-weight:600}
+#askNo{background:#1b2a47;color:#cfe0ff}
+</style>
+<div id="askOv"><div id="askBx"><h3 id="askT"></h3><div id="askF"></div><div class="ab"><button id="askNo">Cancel</button><button id="askOk">OK</button></div></div></div>
+<script>
+window.askBox=function(title,fields){return new Promise(function(res){
+var ov=document.getElementById("askOv");document.getElementById("askT").textContent=title;
+var box=document.getElementById("askF");box.innerHTML="";var ins=[];
+fields.forEach(function(f){var l=document.createElement("label");l.textContent=f.label;var i=document.createElement("input");i.value=f.value||"";box.appendChild(l);box.appendChild(i);ins.push(i);});
+ov.style.display="flex";setTimeout(function(){ins[0].focus();ins[0].select();},50);
+function done(v){ov.style.display="none";document.getElementById("askOk").onclick=null;document.getElementById("askNo").onclick=null;res(v);}
+document.getElementById("askOk").onclick=function(){done(ins.map(function(i){return i.value;}));};
+document.getElementById("askNo").onclick=function(){done(null);};
+});};
+</script></body>
 </html>
