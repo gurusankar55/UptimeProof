@@ -247,7 +247,7 @@ async function write(fn, args, value=0n, btn){
   try{
     log(`Sending ${fn}… sign in your wallet`);
     const c=writer();
-    let fees; try{ if(typeof c.estimateTransactionFees==="function"){ const est=await c.estimateTransactionFees({leaderTimeunitsAllocation:300n,validatorTimeunitsAllocation:600n,rotations:[0n]}); fees={distribution:est.distribution,feeValue:est.feeValue}; } else { log("fee helper missing in this SDK version"); } }catch(e){ log("fee estimate failed: "+e.message); }
+    let fees; try{ try{ if(typeof c.estimateTransactionFeesForWrite==="function"){ const rec=await c.estimateTransactionFeesForWrite({account:c.account,address:contract(),functionName:fn,args,value}); fees={distribution:rec.distribution,messageAllocations:rec.messageAllocations,feeValue:rec.feeValue}; log("fee: recommended for "+fn); } }catch(e1){ log("recommended fee failed, using fixed: "+e1.message); } if(!fees && typeof c.estimateTransactionFees==="function"){ const est=await c.estimateTransactionFees({leaderTimeunitsAllocation:1000n,validatorTimeunitsAllocation:2000n,rotations:[0n]}); fees={distribution:est.distribution,feeValue:est.feeValue}; } }catch(e){ log("fee estimate failed: "+e.message); }
     const hash = await c.writeContract({ address: contract(), functionName: fn, args, value, ...(fees?{fees}:{}) });
     log(`Tx ${hash} sent. Waiting for validators (settle can take 1-3 min)…`);
     const r = await c.waitForTransactionReceipt({ hash, status: TransactionStatus.ACCEPTED, retries: 120, interval: 4000 });
